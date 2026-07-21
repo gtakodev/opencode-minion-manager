@@ -1,4 +1,9 @@
-import { tool, type Config, type Plugin } from "@opencode-ai/plugin";
+import {
+  tool,
+  type Config,
+  type Plugin,
+  type PluginModule,
+} from "@opencode-ai/plugin";
 import { createOpencodeClient } from "@opencode-ai/sdk/v2/client";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -15,7 +20,8 @@ import { createRun, PROFILES, type HostPermissions } from "./core/types.js";
 import { liveCatalog, OpenCodeSessionPort } from "./adapters/opencode.js";
 import { registerConfig } from "./registration.js";
 
-const pluginID = "opencode.minion-manager";
+export const id = "opencode.minion-manager";
+const pluginID = id;
 const execFileAsync = promisify(execFile);
 
 export const server: Plugin = async (
@@ -139,7 +145,7 @@ export const server: Plugin = async (
             },
             emit: () => undefined,
             now: Date.now,
-            id: crypto.randomUUID,
+            id: createRunID,
             worktree: storageRoot,
             config: runConfig,
           });
@@ -275,7 +281,7 @@ export const server: Plugin = async (
             },
             emit: () => undefined,
             now: Date.now,
-            id: crypto.randomUUID,
+            id: createRunID,
             worktree: storageRoot,
             config,
           });
@@ -425,7 +431,7 @@ export const server: Plugin = async (
               requiredCapabilities: ["text", "tools"],
             },
           );
-          const runID = args.runID ?? crypto.randomUUID();
+          const runID = args.runID ?? createRunID();
           const machine = new RunMachine(
             createRun(runID, args.workflow, args.task, Date.now()),
           );
@@ -608,3 +614,9 @@ function phaseName(profile: (typeof PROFILES)[number]) {
     } as const
   )[profile];
 }
+
+export function createRunID(): string {
+  return crypto.randomUUID();
+}
+
+export default { id, server } satisfies PluginModule;

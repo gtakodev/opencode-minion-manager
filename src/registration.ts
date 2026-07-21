@@ -66,12 +66,6 @@ export function registerConfig(config: Config): void {
 
   config.command ??= {};
   Object.assign(config.command, {
-    manager: {
-      template:
-        "Open Manager mode and ask me to choose Auto, Implement, Review, or Research before acting.",
-      description: "Choose a persistent Manager workflow",
-      agent: "Manager",
-    },
     "manager/implement": {
       template: "Run a one-shot Implement workflow for: $ARGUMENTS",
       description: "Implement, verify, and independently review",
@@ -87,26 +81,10 @@ export function registerConfig(config: Config): void {
       description: "Research with evidence",
       agent: "Manager",
     },
-    "manager/settings": {
-      template:
-        "Show the effective Minion Manager settings and actionable validation diagnostics.",
-      description: "Inspect Manager settings",
-      agent: "Manager",
-    },
-    "manager/history": {
-      template: "Show recent Minion Manager run metadata and recovery choices.",
-      description: "Inspect Manager run history",
-      agent: "Manager",
-    },
     "manager/cancel": {
       template:
         "Call manager_cancel to cancel the current Manager run and interrupt every owned Minion. Do not roll back files.",
       description: "Cancel the active Manager run",
-      agent: "Manager",
-    },
-    "manager/off": {
-      template: "Disable persistent Manager mode for this session.",
-      description: "Leave Manager mode",
       agent: "Manager",
     },
   });

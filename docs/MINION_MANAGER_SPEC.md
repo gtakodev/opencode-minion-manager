@@ -145,7 +145,7 @@ The terminal receives the complete UX: a `/manager` picker, command-palette acti
 - Register `minion/plan`, `minion/implement`, `minion/review`, `minion/research`, `minion/verify`, and `minion/report` as `subagent` profiles.
 - The Manager is denied edit and shell operations. Its concrete-work capability is limited to the Minion delegation tool, coordination state, and user approval interactions.
 - Minion profiles cannot recursively orchestrate or launch arbitrary subagents.
-- Register native commands for `/manager`, `/manager/implement`, `/manager/review`, `/manager/research`, `/manager/settings`, `/manager/history`, `/manager/cancel`, and `/manager/off` where the host surface supports them.
+- Register `/manager`, `/manager/settings`, `/manager/history`, and `/manager/off` as native TUI actions that never submit an LLM prompt. Register `/manager/implement`, `/manager/review`, `/manager/research`, and `/manager/cancel` as server-side model commands where the host surface supports them.
 - `/manager/implement`, `/manager/review`, and `/manager/research` are one-shot invocations. `/manager` changes the current session's persistent Manager mode.
 
 ### Dynamic Minion delegation

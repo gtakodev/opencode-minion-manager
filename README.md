@@ -13,7 +13,15 @@ The Manager coordinates but cannot edit files or run shell commands. Every child
 
 ## Install
 
-Add the package to OpenCode configuration:
+Install the package through OpenCode so both its server and TUI targets are configured:
+
+```sh
+opencode plugin opencode-minion-manager --global
+```
+
+This adds the package to both `opencode.json` (server) and `tui.json` (terminal UI). If configuring it manually, the same package spec must appear in the `plugin` array of both files.
+
+The server configuration is:
 
 ```json
 {
@@ -22,7 +30,13 @@ Add the package to OpenCode configuration:
 }
 ```
 
-For local development, use the packed tarball produced by `npm pack` or point the plugin entry at `dist/server.js`. OpenCode supplies the optional TUI peers when it loads `opencode-minion-manager/tui`.
+For local development, use the packed tarball produced by `npm pack` or install the repository root directly:
+
+```sh
+opencode plugin file:///absolute/path/to/opencode-minion-manager/ --global --force
+```
+
+OpenCode discovers the package's `./server` and `./tui` entrypoints from `package.json`; pointing directly at `dist/server.js` bypasses TUI discovery.
 
 Select **Manager** in OpenCode's native agent picker. In the terminal, `/manager` or the `manager.open` action (`<leader>o` by default) opens the workflow picker:
 
@@ -31,11 +45,13 @@ Select **Manager** in OpenCode's native agent picker. In the terminal, `/manager
 - Review is read-only and uses explicit scope before dirty-worktree/merge-base fallback.
 - Research runs up to three independent readers; reports are written only when explicitly requested.
 
-Direct one-shot commands are `/manager/implement`, `/manager/review`, and `/manager/research`. Additional commands cover settings, history, cancellation, and `/manager/off`.
+Direct one-shot prompt commands are `/manager/implement`, `/manager/review`, and `/manager/research`. `/manager`, `/manager/settings`, `/manager/history`, and `/manager/off` are native TUI actions and never submit a prompt. `/manager/cancel` asks the Manager to invoke the server-owned cancellation tool.
 
 ## Configuration
 
 Zero configuration uses conservative defaults: three readers, one writer, two correction cycles, 50 project run records, adaptive approvals, and no monetary budget assumption. Project values override global values; plugin options override both.
+
+In the terminal, `/manager/settings` opens native Project and Global editors grouped into Models, Limits, Approvals, Workflows, and Appearance. Common values use selectors or focused prompts, model choices are checked against the live enabled catalog, and Advanced JSON remains available for debug and uncommon fields.
 
 ```json
 [

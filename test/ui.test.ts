@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { PICKER_OPTIONS, formatStatusBand } from "../src/core/ui.js";
-import { withMotion } from "../src/tui.js";
+import tuiModule, { tui, withMotion } from "../src/tui.js";
 
 describe("terminal presentation contract", () => {
   it("keeps the canonical picker order and portable glyphs", () => {
@@ -45,5 +45,106 @@ describe("terminal presentation contract", () => {
     expect(withMotion("◈ research · ready", "off", 2)).toBe(
       "◈ research · ready",
     );
+  });
+
+  it("exports the OpenCode TUI module shape", () => {
+    expect(tuiModule).toMatchObject({
+      id: "opencode.minion-manager",
+      tui,
+    });
+  });
+
+  it("registers manager settings as a native dialog command", async () => {
+    const commands: Array<{
+      slashName?: string;
+      run?: () => void;
+    }> = [];
+    const dialogSelect = vi.fn((props) => props);
+    const replace = vi.fn((render: () => unknown) => render());
+    const values = new Map<string, unknown>([
+      ["manager.firstRunDismissed", true],
+    ]);
+    const api = {
+      state: {
+        path: { config: "/tmp/minion-manager-config", worktree: process.cwd() },
+        provider: [],
+      },
+      tuiConfig: { keybinds: { bindings: [] } },
+      kv: {
+        get: (key: string, fallback: unknown) =>
+          values.has(key) ? values.get(key) : fallback,
+        set: (key: string, value: unknown) => values.set(key, value),
+      },
+      renderer: { requestRender: vi.fn(), width: 80 },
+      lifecycle: { onDispose: vi.fn() },
+      route: {
+        current: { name: "home" },
+        register: vi.fn(() => vi.fn()),
+        navigate: vi.fn(),
+      },
+      ui: {
+        toast: vi.fn(),
+        dialog: { setSize: vi.fn(), replace, clear: vi.fn() },
+        DialogSelect: dialogSelect,
+        DialogPrompt: vi.fn((props) => props),
+        DialogConfirm: vi.fn((props) => props),
+        DialogAlert: vi.fn((props) => props),
+      },
+      keymap: {
+        registerLayer: vi.fn((layer) => {
+          commands.push(...(layer.commands ?? []));
+          return vi.fn();
+        }),
+        dispatchCommand: vi.fn(),
+      },
+      event: { on: vi.fn(() => vi.fn()) },
+      slots: { register: vi.fn(() => "slot") },
+      client: {
+        v2: { session: { switchAgent: vi.fn() } },
+        session: { prompt: vi.fn() },
+      },
+      theme: {
+        current: {
+          text: "white",
+          textMuted: "gray",
+          warning: "yellow",
+          success: "green",
+          error: "red",
+          accent: "purple",
+        },
+      },
+    };
+
+    await tui(api as never, undefined, {} as never);
+    const settings = commands.find(
+      (command) => command.slashName === "manager/settings",
+    );
+
+    expect(settings).toBeDefined();
+    settings?.run?.();
+    expect(dialogSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Manager settings" }),
+    );
+
+    const settingsMenu = dialogSelect.mock.calls.at(-1)?.[0] as {
+      options: Array<{ value: string }>;
+      onSelect: (option: { value: string }) => Promise<void>;
+    };
+    await settingsMenu.onSelect(
+      settingsMenu.options.find((option) => option.value === "project")!,
+    );
+    expect(dialogSelect).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        title: "Project Manager settings",
+        options: expect.arrayContaining([
+          expect.objectContaining({ title: "Models" }),
+          expect.objectContaining({ title: "Limits" }),
+          expect.objectContaining({ title: "Approvals" }),
+          expect.objectContaining({ title: "Workflows" }),
+          expect.objectContaining({ title: "Appearance" }),
+        ]),
+      }),
+    );
+    expect(api.client.session.prompt).not.toHaveBeenCalled();
   });
 });

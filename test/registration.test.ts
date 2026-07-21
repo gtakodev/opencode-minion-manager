@@ -35,19 +35,15 @@ describe("OpenCode registration contract", () => {
     ).toBe(true);
   });
 
-  it("registers every canonical command", () => {
+  it("registers only commands that intentionally prompt the Manager", () => {
     const config: Config = {};
     registerConfig(config);
 
     expect(Object.keys(config.command ?? {})).toEqual([
-      "manager",
       "manager/implement",
       "manager/review",
       "manager/research",
-      "manager/settings",
-      "manager/history",
       "manager/cancel",
-      "manager/off",
     ]);
   });
 });

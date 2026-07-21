@@ -9,7 +9,8 @@ const packOutput = execFileSync("npm", ["pack", "--json"], {
   encoding: "utf8",
 });
 const [{ filename }] = JSON.parse(packOutput);
-const fixture = mkdtempSync(join(tmpdir(), "minion-manager-packed-"));
+const temporaryRoot = process.platform === "linux" ? "/tmp" : tmpdir();
+const fixture = mkdtempSync(join(temporaryRoot, "minion-manager-packed-"));
 writeFileSync(
   join(fixture, "package.json"),
   JSON.stringify({ name: "packed-fixture", private: true, type: "module" }),
@@ -29,10 +30,12 @@ execFileSync(
 writeFileSync(
   join(fixture, "verify.mjs"),
   `import * as server from "opencode-minion-manager";
+import * as discoveredServer from "opencode-minion-manager/server";
 import * as core from "opencode-minion-manager/core";
 import * as v2 from "opencode-minion-manager/v2";
 import * as tui from "opencode-minion-manager/tui";
-if (typeof server.server !== "function" || typeof tui.tui !== "function" || v2.MinionManagerV2.id !== "opencode.minion-manager") throw new Error("Packed entrypoint contract failed.");
+if (typeof server.server !== "function" || typeof discoveredServer.server !== "function" || typeof tui.tui !== "function" || v2.MinionManagerV2.id !== "opencode.minion-manager") throw new Error("Packed entrypoint contract failed.");
+if (server.default?.server !== server.server || discoveredServer.default?.server !== discoveredServer.server || tui.default?.tui !== tui.tui) throw new Error("OpenCode plugin module shape failed.");
 if (core.DEFAULT_CONFIG.limits.writers !== 1) throw new Error("Packed core contract failed.");
 `,
 );
@@ -43,5 +46,5 @@ execFileSync(process.execPath, ["verify.mjs"], {
 unlinkSync(join(root, filename));
 const packed = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 console.log(
-  `Packed ${packed.name}@${packed.version} installed in ${fixture}; server, V2, TUI, and core entrypoints loaded.`,
+  `Packed ${packed.name}@${packed.version} installed in ${fixture}; discoverable server, V2, TUI, and core entrypoints loaded.`,
 );

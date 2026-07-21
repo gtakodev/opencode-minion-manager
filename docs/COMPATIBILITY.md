@@ -2,7 +2,7 @@
 
 | Component                        | Supported/tested version           | Status                                                                 |
 | -------------------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
-| OpenCode / `@opencode-ai/plugin` | 1.18.4                             | Pinned; server and Promise V2 types compile                            |
+| OpenCode / `@opencode-ai/plugin` | 1.18.4                             | Pinned; package-root server and TUI discovery smoke-tested             |
 | `@opencode-ai/sdk`               | 1.18.4                             | Exact child model/variant, prompt, abort, and catalog adapter compiled |
 | OpenTUI core/keymap/solid        | 0.4.5                              | TUI entrypoint compiled and clean-installed                            |
 | Node.js                          | 24.16.0 on WSL2                    | Full local gate                                                        |
@@ -11,3 +11,5 @@
 | macOS native                     | Not run                            | Design/compile compatibility only                                      |
 
 The host API is beta. Server concerns that are not yet present in the Promise V2 registration API (executable custom tools and session client calls) remain isolated in `src/server.ts` and `src/adapters/opencode.ts`. The V2 registration entrypoint is exported separately at `opencode-minion-manager/v2`.
+
+OpenCode stores server and terminal UI plugin lists separately. Install through `opencode plugin <package> --global` so it updates both `opencode.json` and `tui.json`; a manual install must list the package in both files.
