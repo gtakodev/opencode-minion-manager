@@ -8,11 +8,13 @@ import { RunMachine } from "./core/state.js";
 import { PICKER_OPTIONS, formatStatusBand } from "./core/ui.js";
 import {
   PROFILES,
+  type PhaseName,
   type Profile,
   type RunRecord,
   type Workflow,
 } from "./core/types.js";
 import type { StatusBand } from "./core/ui.js";
+import { ManagerWorkflowPicker, workflowColor } from "./tui-picker.js";
 
 export const id = "opencode.minion-manager";
 
@@ -21,6 +23,9 @@ export const tui: TuiPlugin = async (api) => {
     api.state.path.config,
     api.state.path.worktree,
   );
+  const modes = new Map<string, Workflow>();
+  const runtimeStates = new Map<string, StatusBand["state"]>();
+  const runs = new Map<string, RunRecord>();
   const shortcut = effectiveConfig.appearance.shortcut;
   let motionTick = 0;
   const shortcutCollision = api.tuiConfig.keybinds.bindings.some(
@@ -30,15 +35,16 @@ export const tui: TuiPlugin = async (api) => {
   api.kv.set("manager.motion", effectiveConfig.motion);
   if (effectiveConfig.motion === "full") {
     const motionTimer = setInterval(() => {
+      const hasActiveAgent =
+        [...runtimeStates.values()].some((state) => state === "working") ||
+        [...runs.values()].some((run) => run.status === "running");
+      if (!hasActiveAgent) return;
       motionTick += 1;
       api.renderer.requestRender();
     }, 700);
     motionTimer.unref();
     api.lifecycle.onDispose(() => clearInterval(motionTimer));
   }
-  const modes = new Map<string, Workflow>();
-  const runtimeStates = new Map<string, StatusBand["state"]>();
-  const runs = new Map<string, RunRecord>();
   const currentSession = (): string | undefined => {
     const route = api.route.current;
     const sessionID = "params" in route ? route.params?.sessionID : undefined;
@@ -48,35 +54,45 @@ export const tui: TuiPlugin = async (api) => {
   };
   const openPicker = () => {
     const sessionID = currentSession();
-    const current = sessionID ? modes.get(sessionID) : undefined;
-    api.ui.dialog.setSize("large");
-    api.ui.dialog.replace(() =>
-      api.ui.DialogSelect<Workflow>({
-        title: "Minion Manager",
-        ...(current ? { current } : {}),
-        options: PICKER_OPTIONS.map((option) => ({
-          title: `${option.icon}  ${option.label}`,
-          value: option.value,
-          description: pickerDescription(option.value),
-        })),
-        onSelect: async (option) => {
-          const sessionID = currentSession();
-          if (sessionID) {
-            modes.set(sessionID, option.value);
-            await api.client.v2.session.switchAgent({
-              sessionID,
-              agent: "Manager",
-            });
-          }
-          api.kv.set(`manager.mode.${sessionID ?? "home"}`, option.value);
-          api.ui.dialog.clear();
-          api.ui.toast({
-            variant: "success",
-            title: "Manager",
-            message: `${option.value} mode is ready.`,
-          });
-        },
-      }),
+    const current =
+      (sessionID ? modes.get(sessionID) : undefined) ??
+      (api.kv.get(`manager.mode.${sessionID ?? "home"}`) as
+        | Workflow
+        | undefined);
+    api.ui.dialog.setSize(api.renderer.width >= 96 ? "xlarge" : "large");
+    const selectWorkflow = async (workflow: Workflow) => {
+      const sessionID = currentSession();
+      if (sessionID) {
+        modes.set(sessionID, workflow);
+        await api.client.v2.session.switchAgent({
+          sessionID,
+          agent: "Manager",
+        });
+      }
+      api.kv.set(`manager.mode.${sessionID ?? "home"}`, workflow);
+      api.ui.dialog.clear();
+      api.ui.toast({
+        variant: "success",
+        title: "Manager",
+        message: `${workflow} mode is ready.`,
+      });
+    };
+    const show = (selected: number): void => {
+      api.ui.dialog.replace(() => (
+        <ManagerWorkflowPicker
+          api={api}
+          selected={selected}
+          onMove={show}
+          onSelect={selectWorkflow}
+          onClose={() => api.ui.dialog.clear()}
+        />
+      ));
+    };
+    show(
+      Math.max(
+        0,
+        PICKER_OPTIONS.findIndex((option) => option.value === current),
+      ),
     );
   };
   const openSettings = () => {
@@ -883,18 +899,21 @@ export const tui: TuiPlugin = async (api) => {
         );
         const runState = run ? runStatus(run) : undefined;
         const visibleWorkflow = workflow ?? run?.workflow;
+        const visibleState =
+          runState ?? runtimeStates.get(props.session_id) ?? "ready";
         return visibleWorkflow ? (
           <text
             fg={statusColor(
               api,
-              runState ?? runtimeStates.get(props.session_id) ?? "ready",
+              visibleState,
+              visibleWorkflow,
+              activePhase?.name,
             )}
           >
             {withMotion(
               formatStatusBand(
                 {
-                  state:
-                    runState ?? runtimeStates.get(props.session_id) ?? "ready",
+                  state: visibleState,
                   workflow: visibleWorkflow,
                   ...(run
                     ? {
@@ -926,6 +945,8 @@ export const tui: TuiPlugin = async (api) => {
               ),
               api.kv.get("manager.motion", effectiveConfig.motion),
               motionTick,
+              visibleState === "working",
+              visibleWorkflow,
             )}
           </text>
         ) : null;
@@ -955,28 +976,31 @@ export const tui: TuiPlugin = async (api) => {
 function statusColor(
   api: Parameters<TuiPlugin>[0],
   state: StatusBand["state"],
+  workflow: Workflow,
+  phase?: PhaseName,
 ) {
   if (state === "waiting") return api.theme.current.warning;
   if (state === "success") return api.theme.current.success;
   if (state === "error") return api.theme.current.error;
-  return api.theme.current.accent;
+  if (state === "working" && phase)
+    return {
+      planning: api.theme.current.info,
+      implementing: api.theme.current.success,
+      verifying: api.theme.current.warning,
+      reviewing: api.theme.current.accent,
+      researching: api.theme.current.warning,
+      reporting: api.theme.current.accent,
+    }[phase];
+  return workflowColor(api, workflow);
 }
 
 function runStatus(record: RunRecord): StatusBand["state"] {
+  if (record.status === "pending") return "ready";
   if (record.status === "succeeded") return "success";
   if (["failed", "cancelled", "abandoned", "partial"].includes(record.status))
     return "error";
   if (["waiting", "interrupted"].includes(record.status)) return "waiting";
   return "working";
-}
-
-function pickerDescription(workflow: Workflow): string {
-  return {
-    auto: "Classify the task, announce the workflow, then coordinate it",
-    implement: "Plan when useful, implement, verify, and independently review",
-    review: "Inspect an explicit or detected scope without editing",
-    research: "Investigate code, external sources, or both with evidence",
-  }[workflow];
 }
 
 export default { id, tui } satisfies TuiPluginModule;
@@ -1010,8 +1034,12 @@ export function withMotion(
   status: string,
   motion: "full" | "reduced" | "off",
   tick: number,
+  active = false,
+  workflow: Workflow = "auto",
 ): string {
-  if (motion === "off") return status;
-  const frames = motion === "full" ? ["◈", "◇", "◆", "◇"] : ["◆"];
-  return status.replace(/^◈/, frames[tick % frames.length]!);
+  if (motion !== "full" || !active) return status;
+  const frames =
+    PICKER_OPTIONS.find((option) => option.value === workflow)?.frames ??
+    PICKER_OPTIONS[0].frames;
+  return status.replace(/^\S+/, frames[tick % frames.length]!);
 }

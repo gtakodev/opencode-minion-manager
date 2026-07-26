@@ -45,6 +45,8 @@ Select **Manager** in OpenCode's native agent picker. In the terminal, `/manager
 - Review is read-only and uses explicit scope before dirty-worktree/merge-base fallback.
 - Research runs up to three independent readers; reports are written only when explicitly requested.
 
+The picker presents these workflows as color-coded pixel-art cards inside OpenCode's native dialog. After selection, a compact status cue above the native composer shows the workflow, phase, routed Minion profile, and child model. Picker, ready, approval, completed, and error states remain still; only active Manager or Minion work receives a local width-stable animation.
+
 Direct one-shot prompt commands are `/manager/implement`, `/manager/review`, and `/manager/research`. `/manager`, `/manager/settings`, `/manager/history`, and `/manager/off` are native TUI actions and never submit a prompt. `/manager/cancel` asks the Manager to invoke the server-owned cancellation tool.
 
 ## Configuration

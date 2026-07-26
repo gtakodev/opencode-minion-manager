@@ -6,5 +6,6 @@
 - Register Manager, six Minion profiles, four native TUI actions, four model-driven commands, and exact child-session delegation.
 - Package discoverable `./server` and `./tui` entrypoints and preserve Web Crypto's receiver when generating run IDs under Bun.
 - Present Project and Global settings as grouped native controls, with live-catalog validation for model policy and routing choices.
+- Replace the textual workflow selector with a responsive, color-coded pixel-art picker and animate the compact composer status only while Manager or Minions are actively working.
 - Add separate server, Promise V2, TUI, and core package exports.
 - Add WSL-tested unit, integration, build, and clean packed-install checks.

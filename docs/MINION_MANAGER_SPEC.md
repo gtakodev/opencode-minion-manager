@@ -281,12 +281,12 @@ The terminal receives the complete UX: a `/manager` picker, command-palette acti
 ### TUI experience
 
 - `/manager` opens a native large dialog; it does not insert a slash command into the prompt.
-- The picker uses small code-drawn pixel-art glyphs built from width-stable block and geometric characters. Every icon has a text label.
-- The active selection gets a restrained local animation. No layout-affecting animation or per-cell full-screen shader is used.
+- The picker uses four color-coded cards with code-drawn pixel-art glyphs built from width-stable block and geometric characters. Every icon has a text label and description.
+- Picker, ready, approval, terminal, and error states remain still. A width-stable local glyph animates only while a Manager or Minion is actively doing work; no surrounding layout moves and no per-cell full-screen shader is used.
 - The visual motion language is inspired by Kit Langton's “Liquid Crown”: breathing, glimmer, handoff, and short state transitions rather than continuous spectacle.
 - Motion modes are `full`, `reduced`, and `off`.
-- A compact status band sits above the session composer. Representative content is `◈ implement · 2/4 · minion/verify · sol#medium`.
-- Status colors follow semantic theme tokens: purple/accent for working, yellow/warning for waiting, green/success for success, and red/error for failure.
+- A compact status band sits above the session composer. Representative content is `◆ Manager › Implement · 2/4 · minion/verify · sol#medium`.
+- Ready status uses the selected workflow's stable theme color. Active status follows the current phase: info for planning, success for implementing, warning for verifying, accent for reviewing, and warning for researching. Waiting, terminal-success, and terminal-error states use warning, success, and error tokens respectively.
 - The band shows `ready` when Manager mode is active without a running task.
 - Detailed information is available on demand instead of expanding the default band.
 - The canonical shortcut action is `manager.open`. The suggested default is `<leader>o`, subject to collision detection and user override; `/manager` and the command palette remain canonical access paths.
