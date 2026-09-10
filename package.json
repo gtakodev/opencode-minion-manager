@@ -76,6 +76,6 @@
     "@types/node": "24.12.2",
     "prettier": "3.6.2",
     "typescript": "5.8.2",
-    "vitest": "3.2.7"
+    "vitest": "5.0.0"
   }
 }
